@@ -1,0 +1,13 @@
+{
+  "gallery_url": "https://www.meta.com/gallery/",
+  "browser_channel": "chrome",
+  "name_prefix": "MyClips",
+  "since_date": "",
+  "lookback_days": 3,
+  "min_duration_seconds": 30,
+  "gallery_order": "newest_first",
+  "reference_video_id": "",
+  "required_description_text": "Unlisted video may only be shared if you gain permission first.",
+  "title_suffix": "",
+  "max_title_length": 100
+}

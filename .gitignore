@@ -1,0 +1,10 @@
+tool/secrets/
+tool/profile/
+tool/new/
+tool/uploaded/
+tool/manifest.csv
+tool/pipeline.log
+tool/config.json
+__pycache__/
+*.pyc
+.venv/

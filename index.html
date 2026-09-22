@@ -1,0 +1,155 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="color-scheme" content="dark">
+<meta name="darkreader-lock">
+<title>Contact Sheet</title>
+<meta name="description" content="Contact Sheet - a small pipeline that pulls clips and stills off your VR headset's gallery, renames them cleanly, and gets them ready to publish.">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns=%22http://www.w3.org/2000/svg%22 viewBox=%220 0 100 100%22><rect width=%22100%22 height=%22100%22 rx=%2214%22 fill=%22%23060607%22/><rect x=%2218%22 y=%2228%22 width=%2264%22 height=%2244%22 rx=%224%22 fill=%22none%22 stroke=%22%23ff1744%22 stroke-width=%226%22/></svg>">
+<link rel="stylesheet" href="style.css">
+</head>
+<body>
+
+<div class="topbar"><a href="https://dredarkroom.github.io/darklabs/">&larr; Darkroom Labs</a></div>
+
+<header class="hero">
+  <div class="hero-strip" id="heroStrip" aria-hidden="true">
+    <svg viewBox="0 0 1400 360" preserveAspectRatio="xMidYMid slice">
+      <defs>
+        <pattern id="sprocket" width="70" height="360" patternUnits="userSpaceOnUse">
+          <circle cx="35" cy="20" r="6" fill="#1a1a1a"/>
+          <circle cx="35" cy="340" r="6" fill="#1a1a1a"/>
+        </pattern>
+      </defs>
+      <rect width="1400" height="360" fill="#0a0a0a"/>
+      <rect width="1400" height="360" fill="url(#sprocket)"/>
+      <g id="frameRow"></g>
+    </svg>
+  </div>
+  <div class="hero-fade"></div>
+  <div class="hero-text">
+    <h1>Contact Sheet</h1>
+    <p class="tagline">DEVELOP YOUR VR GALLERY</p>
+    <p class="lede">Pull new clips and stills off your headset's gallery, name them like you mean it,<br>
+    and get them ready to publish — without doing it by hand, clip after clip.</p>
+    <a class="btn" href="https://github.com/DreDarkroom/contact-sheet">View on GitHub</a>
+  </div>
+</header>
+
+<main class="container">
+
+<section class="lead-in">
+  <p>Every headset gallery has the same problem: clips pile up with names like
+  <code>video_2847.mp4</code>, YouTube uploads are all-or-nothing, and there's no way to just
+  quietly stage everything unlisted until you're ready. <strong>Contact Sheet</strong> is the small
+  pipeline built to fix that — for one person, on one machine, with nothing sent anywhere you
+  didn't choose.</p>
+</section>
+
+<section class="steps">
+  <div class="step">
+    <div class="step-num">01</div>
+    <h3>Pull</h3>
+    <p>Finds clips and stills in your Meta Quest gallery it hasn't seen before. Nothing is
+    deleted or reorganised at the source — read-only, every time.</p>
+  </div>
+  <div class="step">
+    <div class="step-num">02</div>
+    <h3>Review</h3>
+    <p>A picture-sheet page opens so you can leave out what you don't want &mdash; other content,
+    accidental recordings &mdash; before anything downloads.</p>
+  </div>
+  <div class="step">
+    <div class="step-num">03</div>
+    <h3>Rename</h3>
+    <p>A clean, date-based convention you control. No auto-generated gibberish, no symbols,
+    nothing that leaks what's actually in the file.</p>
+  </div>
+  <div class="step">
+    <div class="step-num">04</div>
+    <h3>Publish (carefully)</h3>
+    <p>Clips upload to YouTube as <strong>unlisted</strong> &mdash; always. Going public is a
+    separate command that makes you type <code>PUBLISH</code>. Stills route to your own cloud
+    storage instead, since YouTube was never built to show off a photo.</p>
+  </div>
+</section>
+
+<section class="sample">
+  <h2>What the picture sheet looks like</h2>
+  <p class="muted">A stand-in for the real review page &mdash; yours will show your own thumbnails.</p>
+  <div class="mock-grid">
+    <div class="mock-card"><div class="mock-thumb"><span class="mock-play">&#9658;</span></div><div class="mock-label">MyClips_0904_01</div></div>
+    <div class="mock-card"><div class="mock-thumb still"></div><div class="mock-label">MyClips_0904_02</div></div>
+    <div class="mock-card"><div class="mock-thumb"><span class="mock-play">&#9658;</span></div><div class="mock-label">MyClips_0904_03</div></div>
+    <div class="mock-card skip"><div class="mock-thumb"><span class="mock-play">&#9658;</span></div><div class="mock-label">left out</div></div>
+    <div class="mock-card"><div class="mock-thumb still"></div><div class="mock-label">MyClips_0904_04</div></div>
+    <div class="mock-card"><div class="mock-thumb"><span class="mock-play">&#9658;</span></div><div class="mock-label">MyClips_0904_05</div></div>
+  </div>
+</section>
+
+<section class="safety">
+  <h2>The unlisted rule is load-bearing</h2>
+  <p>Every upload is unlisted by default, and the script <em>refuses to run</em> if the reference
+  video it copies details from doesn't contain your chosen notice text. That check exists so a
+  clip can never go out without it &mdash; not a setting you can forget to tick, a wall it won't
+  climb over. Publishing is its own command, and it won't move without you typing
+  <code>PUBLISH</code> in full.</p>
+</section>
+
+<section class="cta">
+  <h2>Get it</h2>
+  <p>Python, your own Chrome, and Google's free YouTube API tier. Twenty to thirty minutes to set
+  up, once.</p>
+  <a class="btn" href="https://github.com/DreDarkroom/contact-sheet">github.com/DreDarkroom/contact-sheet</a>
+</section>
+
+</main>
+
+<footer>
+  <p>A <a href="https://dredarkroom.github.io/darklabs/">Dre Darkroom</a> tool &middot; MIT licensed &middot; <span class="mark">DD</span></p>
+</footer>
+
+<script>
+(function(){
+  // build the filmstrip frames once
+  var row = document.getElementById('frameRow');
+  if (row) {
+    var w = 1400, fw = 150, gap = 20, y = 70, fh = 220;
+    var n = Math.ceil((w * 2) / (fw + gap)) + 2;
+    var html = '';
+    for (var i = 0; i < n; i++) {
+      var x = i * (fw + gap);
+      var lit = (i % 4 === 1);
+      html += '<rect x="' + x + '" y="' + y + '" width="' + fw + '" height="' + fh +
+        '" rx="6" fill="' + (lit ? 'rgba(255,23,68,0.08)' : 'transparent') +
+        '" stroke="' + (lit ? '#ff1744' : '#2a2a2a') + '" stroke-width="2"/>';
+      if (lit) {
+        var cx = x + fw / 2, cy = y + fh / 2;
+        html += '<polygon points="' + (cx - 14) + ',' + (cy - 20) + ' ' + (cx - 14) + ',' + (cy + 20) +
+          ' ' + (cx + 18) + ',' + cy + '" fill="#ff1744" opacity="0.85"/>';
+      }
+    }
+    row.innerHTML = html;
+  }
+  // gentle parallax: the strip drifts slower than the page scrolls
+  var strip = document.getElementById('heroStrip');
+  var reduce = window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  if (strip && !reduce) {
+    var ticking = false;
+    window.addEventListener('scroll', function () {
+      if (ticking) return;
+      ticking = true;
+      requestAnimationFrame(function () {
+        var y = window.scrollY || 0;
+        strip.style.transform = 'translateY(' + Math.min(y * 0.25, 120) + 'px)';
+        ticking = false;
+      });
+    }, { passive: true });
+  }
+})();
+</script>
+
+</body>
+</html>

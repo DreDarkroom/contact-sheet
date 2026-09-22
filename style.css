@@ -1,0 +1,63 @@
+*{margin:0;padding:0;box-sizing:border-box}
+html{background:#0a0a0a;scroll-behavior:smooth}
+body{font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Helvetica,Arial,sans-serif;background:#0a0a0a;color:#fff;min-height:100vh;overflow-x:hidden}
+
+.topbar{position:relative;z-index:5;padding:1rem 1.25rem}
+.topbar a{color:#ff1744;text-decoration:none;font-size:.9rem;font-weight:600}
+.topbar a:hover{text-decoration:underline}
+
+.hero{position:relative;overflow:hidden;padding-bottom:2rem}
+.hero-strip{position:absolute;inset:0;width:100%;height:100%;will-change:transform}
+.hero-strip svg{width:100%;height:100%;display:block}
+.hero-fade{position:absolute;inset:0;background:linear-gradient(180deg,rgba(10,10,10,.25) 0%,rgba(10,10,10,.55) 45%,#0a0a0a 92%)}
+.hero-text{position:relative;z-index:2;max-width:760px;margin:0 auto;text-align:center;padding:3.5rem 1.5rem 2.5rem}
+h1{font-size:clamp(2.4rem,6vw,3.6rem);font-weight:800;color:#fff;letter-spacing:-.02em;margin-bottom:.5rem;text-shadow:0 2px 24px rgba(0,0,0,.6)}
+.tagline{font-size:.85rem;color:#ff5473;letter-spacing:.2em;font-weight:700;margin-bottom:1.25rem}
+.lede{color:#d8d8d8;font-size:1.05rem;line-height:1.7;margin-bottom:1.75rem;text-shadow:0 1px 12px rgba(0,0,0,.5)}
+
+.btn{display:inline-block;background:#ff1744;color:#000;padding:.8rem 1.6rem;border-radius:4px;text-decoration:none;font-weight:700;transition:background .2s ease,transform .2s ease}
+.btn:hover{background:#ff3a5a;transform:translateY(-2px)}
+
+.container{max-width:960px;margin:0 auto;padding:0 1.25rem 3rem}
+
+.lead-in{max-width:680px;margin:0 auto 3.5rem;text-align:center}
+.lead-in p{color:#ccc;font-size:1.05rem;line-height:1.8}
+.lead-in code{background:#1a1a1a;border:1px solid #333;border-radius:3px;padding:.1rem .4rem;color:#ff8fa3;font-size:.9em}
+.lead-in strong{color:#fff}
+
+.steps{display:grid;grid-template-columns:repeat(4,1fr);gap:1.25rem;margin-bottom:4rem}
+.step{border:2px solid #262626;border-radius:8px;padding:1.5rem 1.25rem;background:#111;transition:border-color .2s ease,background .2s ease}
+.step:hover{border-color:#ff1744;background:#161616}
+.step-num{font-family:monospace;font-size:.85rem;color:#ff1744;font-weight:700;margin-bottom:.6rem;letter-spacing:.1em}
+.step h3{font-size:1.15rem;color:#fff;margin-bottom:.5rem}
+.step p{color:#aaa;font-size:.9rem;line-height:1.6}
+.step code{background:#1a1a1a;border:1px solid #333;border-radius:3px;padding:.05rem .35rem;color:#ff8fa3;font-size:.85em}
+
+.sample{margin-bottom:4rem;text-align:center}
+.sample h2{color:#ff1744;font-size:1.4rem;margin-bottom:.4rem}
+.muted{color:#777;font-size:.85rem;margin-bottom:1.75rem}
+.mock-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(140px,1fr));gap:1rem;text-align:left}
+.mock-card{background:#141414;border:1px solid #2a2a2a;border-radius:8px;overflow:hidden}
+.mock-card.skip{opacity:.35}
+.mock-thumb{aspect-ratio:16/9;background:linear-gradient(135deg,#1c1c1c,#242424);display:flex;align-items:center;justify-content:center}
+.mock-thumb.still{background:linear-gradient(135deg,#20161a,#241a1e)}
+.mock-play{color:#ff1744;font-size:1.4rem}
+.mock-label{padding:.55rem .7rem;font-family:monospace;font-size:.75rem;color:#999}
+
+.safety{max-width:680px;margin:0 auto 4rem;text-align:center;padding:2rem 1.5rem;border:1px solid #331018;border-radius:10px;background:radial-gradient(circle at 50% 0%,rgba(255,23,68,.07),transparent 70%)}
+.safety h2{color:#fff;font-size:1.3rem;margin-bottom:.75rem}
+.safety p{color:#c7c7c7;line-height:1.75;font-size:.98rem}
+.safety code{background:#1a1a1a;border:1px solid #333;border-radius:3px;padding:.1rem .4rem;color:#ff8fa3;font-size:.9em}
+.safety em{color:#ff8fa3;font-style:normal;font-weight:600}
+
+.cta{text-align:center;margin-bottom:1rem}
+.cta h2{color:#ff1744;font-size:1.4rem;margin-bottom:.5rem}
+.cta p{color:#aaa;margin-bottom:1.5rem}
+
+footer{text-align:center;color:#666;font-size:.85rem;padding:2.5rem 1rem;border-top:1px solid #222;margin-top:2rem}
+footer a{color:#ff1744;text-decoration:none}
+footer a:hover{text-decoration:underline}
+footer .mark{display:inline-block;margin-left:.4rem;font-family:monospace;font-size:.7rem;color:#3a3a3a;border:1px solid #262626;border-radius:3px;padding:0 .3rem}
+
+@media (max-width:900px){.steps{grid-template-columns:repeat(2,1fr)}}
+@media (max-width:560px){.steps{grid-template-columns:1fr}.hero-text{padding-top:2.5rem}}
