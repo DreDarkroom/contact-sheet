@@ -1,4 +1,4 @@
-{
+﻿{
   "gallery_url": "https://www.meta.com/gallery/",
   "browser_channel": "chrome",
   "name_prefix": "MyClips",
@@ -9,5 +9,7 @@
   "reference_video_id": "",
   "required_description_text": "Unlisted video may only be shared if you gain permission first.",
   "title_suffix": "",
-  "max_title_length": 100
+  "max_title_length": 100,
+  "archive_folder": "Quest Clips",
+  "archive_by_month": true
 }

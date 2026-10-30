@@ -1,20 +1,24 @@
 #!/usr/bin/env python3
 """
-Contact Sheet
-=============
-A small pipeline for VR/headset creators: Meta Quest gallery  ->  renamed local files  ->  YouTube (UNLISTED)
-
-github.com/DreDarkroom/contact-sheet
+Contact Sheet - Quest clip pipeline
+===================================
+Meta gallery  ->  renamed local files  ->  YouTube (UNLISTED)
 
 Commands (normally you just double-click the .bat files):
     run       fetch new clips, ask what to leave out, rename, confirm, upload unlisted  (default)
     fetch     only fetch + rename new clips into the "new" folder (no upload)
     upload    only upload whatever is in the "new" folder (use after editing)
     publish   change an uploaded video from unlisted to public (asks you to confirm)
+    archive   copy clips that are on YouTube to Google Drive (main account) and check the copy;
+              never deletes or moves anything. Use --dry-run to list what it would copy.
 
 Options:
     --dry-run       show what would happen; download and upload nothing
     --since DATE    only look at gallery clips on/after DATE (YYYY-MM-DD)
+    --limit N       archive: copy only N clips this run (smallest first)
+    --yes           non-interactive run (used by the GUI and the LAN page): no questions are asked.
+                    Does NOT bypass the PUBLISH safeguard (publish always needs a person typing
+                    PUBLISH), and a sign-in that needs a browser is refused instead of opened.
 
 Safety rules built in:
     * Uploads are ALWAYS unlisted. Only the "publish" command can change that.
@@ -58,10 +62,13 @@ DEFAULTS = {
     "required_description_text": "Unlisted video may only be shared if you gain permission first.",
     "title_suffix": "",
     "max_title_length": 100,
+    "archive_enabled": False,             # True = "run" also copies uploaded clips to Google Drive
+    "archive_folder": "Quest Clips",        # top-level Drive folder; clips go in YYYY-MM subfolders
+    "archive_by_month": True,
 }
 
 FIELDS = ["key", "date", "nn", "filename", "duration_s", "status",
-          "youtube_id", "title", "updated", "note"]
+          "youtube_id", "title", "updated", "note", "md5", "drive_id", "archived_at"]
 
 MONTHS = {m: i for i, m in enumerate(
     ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"], 1)}
@@ -234,7 +241,7 @@ def open_browser(p, cfg):
     return p.chromium.launch_persistent_context(**kwargs)
 
 
-def ensure_signed_in(page, cfg):
+def ensure_signed_in(page, cfg, assume_yes=False):
     from playwright.sync_api import TimeoutError as PWTimeout
     for _ in range(2):
         try:
@@ -242,6 +249,8 @@ def ensure_signed_in(page, cfg):
             return True
         except PWTimeout:
             pass
+        if assume_yes:
+            raise SystemExit("Meta needs you to sign in. Run Fetch once at the PC (without --yes) to sign in.")
         input("\nMeta may need you to sign in. Sign in in the browser window and open the Gallery,\n"
               "then press Enter here to carry on... ")
         page.goto(cfg["gallery_url"], wait_until="domcontentloaded")
@@ -323,7 +332,7 @@ def write_review_page(clips):
 # --------------------------------------------------------------------------- fetch phase
 
 
-def do_fetch(cfg, since, dry_run):
+def do_fetch(cfg, since, dry_run, assume_yes=False):
     from playwright.sync_api import sync_playwright
     rows = load_manifest()
     known = {r["key"] for r in rows}
@@ -335,7 +344,7 @@ def do_fetch(cfg, since, dry_run):
             page = ctx.pages[0] if ctx.pages else ctx.new_page()
             log("Opening the Meta gallery...")
             page.goto(cfg["gallery_url"], wait_until="domcontentloaded")
-            if not ensure_signed_in(page, cfg):
+            if not ensure_signed_in(page, cfg, assume_yes):
                 log("No videos found in the gallery (or sign-in did not finish). Nothing to do.")
                 return
             items = read_gallery(page, since)
@@ -368,13 +377,16 @@ def do_fetch(cfg, since, dry_run):
             if dry_run:
                 print("\n(dry run: nothing downloaded)")
                 return
-            try:
-                webbrowser.open(REVIEW_HTML.as_uri())
-                print("\nA picture sheet of these clips has opened in your browser.")
-            except Exception:
-                pass
-            ans = input("\nType the numbers to LEAVE OUT (for example 2,5) and press Enter,\n"
-                        "or just press Enter to keep them all (type 'quit' to stop): ").strip().lower()
+            if assume_yes:
+                ans = ""        # --yes: keep every clip (this only downloads; uploading is a separate, confirmed step)
+            else:
+                try:
+                    webbrowser.open(REVIEW_HTML.as_uri())
+                    print("\nA picture sheet of these clips has opened in your browser.")
+                except Exception:
+                    pass
+                ans = input("\nType the numbers to LEAVE OUT (for example 2,5) and press Enter,\n"
+                            "or just press Enter to keep them all (type 'quit' to stop): ").strip().lower()
             if ans == "quit":
                 return
             skip = {int(x) for x in re.findall(r"\d+", ans)}
@@ -422,7 +434,7 @@ def do_fetch(cfg, since, dry_run):
 # --------------------------------------------------------------------------- YouTube
 
 
-def get_youtube():
+def get_youtube(interactive=True):
     from google.auth.transport.requests import Request
     from google.oauth2.credentials import Credentials
     from google_auth_oauthlib.flow import InstalledAppFlow
@@ -440,8 +452,10 @@ def get_youtube():
         except Exception:
             creds = None
     if not creds or not creds.valid:
+        if not interactive:
+            raise SystemExit("YouTube sign-in has expired. Run Upload New Clips once at the PC to sign in again.")
         if not secret_path.exists():
-            raise SystemExit("Missing secrets\\client_secret.json - see step 4 of SETUP_GUIDE.md")
+            raise SystemExit("Missing secrets\\client_secret.json - see step 4 of SETUP_GUIDE")
         flow = InstalledAppFlow.from_client_secrets_file(str(secret_path), scopes)
         print("\nA browser window will open so you can sign in to YouTube and allow uploads...")
         creds = flow.run_local_server(port=0)
@@ -498,7 +512,7 @@ def upload_phase(cfg, dry_run, assume_yes=False):
 
     from googleapiclient.errors import HttpError
     from googleapiclient.http import MediaFileUpload
-    yt = get_youtube()
+    yt = get_youtube(interactive=not assume_yes)
     snippet, status = reference_details(yt, cfg)
     rows = load_manifest()
     by_name = {r.get("filename"): r for r in rows}
@@ -530,6 +544,11 @@ def upload_phase(cfg, dry_run, assume_yes=False):
                 log("YouTube's daily upload limit has been reached. Try again tomorrow.")
                 return
             continue
+        finally:
+            # MediaFileUpload opens its own file handle and never closes it. On Windows this
+            # keeps an exclusive lock on the file, so the f.replace(target) move below fails
+            # with PermissionError/WinError 32 unless we close it explicitly first.
+            media.stream().close()
         vid = response["id"]
         final = response.get("status", {}).get("privacyStatus", "?")
         log(f"  done: https://youtu.be/{vid}  (visibility: {final})")
@@ -547,6 +566,9 @@ def upload_phase(cfg, dry_run, assume_yes=False):
 
 
 def publish_phase(cfg):
+    if not sys.stdin.isatty():
+        raise SystemExit("publish needs a person at the keyboard (it asks you to type PUBLISH). "
+                         "It cannot be run with --yes or from the GUI or LAN page.")
     rows = [r for r in load_manifest() if r.get("status") == "uploaded" and r.get("youtube_id")]
     if not rows:
         print("No uploaded videos recorded yet.")
@@ -583,14 +605,179 @@ def publish_phase(cfg):
     log(f"{r['youtube_id']} is now {target}.")
 
 
+# --------------------------------------------------------------------------- Drive archive
+
+
+def get_drive(interactive=True):
+    """Drive access with its own token file, so the working YouTube sign-in is never touched."""
+    from google.auth.transport.requests import Request
+    from google.oauth2.credentials import Credentials
+    from google_auth_oauthlib.flow import InstalledAppFlow
+    from googleapiclient.discovery import build
+
+    scopes = ["https://www.googleapis.com/auth/drive.file"]
+    token_path = DIR_SECRETS / "token_drive.json"
+    secret_path = DIR_SECRETS / "client_secret.json"
+    creds = None
+    if token_path.exists():
+        creds = Credentials.from_authorized_user_file(str(token_path), scopes)
+    if creds and creds.expired and creds.refresh_token:
+        try:
+            creds.refresh(Request())
+        except Exception:
+            creds = None
+    if not creds or not creds.valid:
+        if not interactive:
+            raise SystemExit("Google Drive sign-in has expired. Run archive once at the PC to sign in again.")
+        if not secret_path.exists():
+            raise SystemExit("Missing secrets\\client_secret.json - see step 4 of SETUP_GUIDE")
+        flow = InstalledAppFlow.from_client_secrets_file(str(secret_path), scopes)
+        print("\nA browser window will open. Sign in with your Google account that has your storage "
+              "and allow access to the Drive files this app creates...")
+        creds = flow.run_local_server(port=0)
+    token_path.write_text(creds.to_json(), encoding="utf-8")
+    return build("drive", "v3", credentials=creds)
+
+
+def md5_of(path):
+    import hashlib
+    h = hashlib.md5()
+    with open(path, "rb") as f:
+        for block in iter(lambda: f.read(16 * 1024 * 1024), b""):
+            h.update(block)
+    return h.hexdigest()
+
+
+def _q(text):
+    return text.replace("\\", "\\\\").replace("'", "\\'")
+
+
+def drive_folder(drive, name, parent=None):
+    """Find (or create) a folder this app can see, directly under parent (My Drive when None)."""
+    q = ("mimeType = 'application/vnd.google-apps.folder' and trashed = false and name = '%s' and '%s' in parents"
+         % (_q(name), parent or "root"))
+    found = drive.files().list(q=q, fields="files(id)", pageSize=1).execute().get("files", [])
+    if found:
+        return found[0]["id"]
+    body = {"name": name, "mimeType": "application/vnd.google-apps.folder"}
+    if parent:
+        body["parents"] = [parent]
+    return drive.files().create(body=body, fields="id").execute()["id"]
+
+
+def clip_month(path):
+    """'MyClips_261027_07.mp4' -> '2026-10' (falls back to the file's date)."""
+    m = re.search(r"_(\d{2})(\d{2})\d{2}_", path.name)
+    if m and 1 <= int(m.group(2)) <= 12:
+        return f"20{m.group(1)}-{m.group(2)}"
+    return dt.datetime.fromtimestamp(path.stat().st_mtime).strftime("%Y-%m")
+
+
+def archive_phase(cfg, dry_run, limit=None, assume_yes=False):
+    rows = load_manifest()
+    todo, missing = [], []
+    for r in rows:
+        if r.get("status") != "uploaded" or not r.get("youtube_id") or r.get("archived_at"):
+            continue
+        p = DIR_UPLOADED / r["filename"]
+        (todo if p.exists() else missing).append((r, p))
+    todo.sort(key=lambda rp: rp[1].stat().st_size)          # smallest first: quick wins, safest test
+    done_already = sum(1 for r in rows if r.get("archived_at"))
+    total = sum(p.stat().st_size for _, p in todo)
+    print(f"\nArchive to Google Drive: {len(todo)} clip(s) waiting, {total / 1e9:.1f} GB "
+          f"({done_already} already archived).")
+    for r, p in todo[: (limit or len(todo))]:
+        print(f"  {p.name}   {p.stat().st_size / 1e9:6.2f} GB   -> {cfg['archive_folder']}/"
+              f"{clip_month(p) if cfg['archive_by_month'] else ''}")
+    if limit and len(todo) > limit:
+        print(f"  ... and {len(todo) - limit} more (limited to {limit} this run)")
+    for r, p in missing:
+        print(f"  !! in the manifest as uploaded but not in the 'uploaded' folder: {r['filename']}")
+    if dry_run:
+        print("\n(dry run: nothing copied, no Google sign-in needed)")
+        return
+    if not todo:
+        return
+
+    from googleapiclient.errors import HttpError
+    from googleapiclient.http import MediaFileUpload
+    drive = get_drive(interactive=not assume_yes)
+    top = drive_folder(drive, cfg["archive_folder"])
+    month_ids = {}
+    for r, p in todo[: (limit or len(todo))]:
+        parent = top
+        if cfg["archive_by_month"]:
+            mon = clip_month(p)
+            if mon not in month_ids:
+                month_ids[mon] = drive_folder(drive, mon, top)
+            parent = month_ids[mon]
+        log(f"Archiving {p.name} ...")
+        local_md5 = md5_of(p)
+        q = "name = '%s' and '%s' in parents and trashed = false" % (_q(p.name), parent)
+        same = [f for f in drive.files().list(q=q, fields="files(id,md5Checksum)").execute().get("files", [])
+                if f.get("md5Checksum") == local_md5]
+        if same:
+            drive_id = same[0]["id"]
+            log("  already in Drive with an identical checksum - not uploading again")
+        else:
+            media = MediaFileUpload(str(p), mimetype="video/mp4", chunksize=32 * 1024 * 1024, resumable=True)
+            request = drive.files().create(body={"name": p.name, "parents": [parent]}, media_body=media,
+                                           fields="id,md5Checksum,size")
+            response, tries = None, 0
+            try:
+                while response is None:
+                    try:
+                        prog, response = request.next_chunk()
+                        if prog:
+                            print(f"\r    {int(prog.progress() * 100)}%", end="", flush=True)
+                    except HttpError as e:
+                        if e.resp.status in (500, 502, 503, 504) and tries < 5:
+                            tries += 1
+                            time.sleep(2 ** tries)
+                            continue
+                        raise
+                    except (OSError, ConnectionError, TimeoutError) as e:
+                        # connection reset / timeout mid-upload: the resumable session survives, so retry the chunk
+                        if tries < 8:
+                            tries += 1
+                            log(f"\n  connection problem ({type(e).__name__}); retry {tries}/8 in {min(60, 2 ** tries)}s")
+                            time.sleep(min(60, 2 ** tries))
+                            continue
+                        log(f"  FAILED after retries: {e}. Stopping; run archive again later, finished clips are skipped.")
+                        return
+                print("\r    100%")
+            except HttpError as e:
+                text = str(e)
+                log(f"  FAILED: {text[:300]}")
+                if "storageQuotaExceeded" in text or "quotaExceeded" in text or "userRateLimitExceeded" in text:
+                    log("Google Drive storage or upload limit reached. Stopping.")
+                    return
+                continue
+            finally:
+                media.stream().close()      # same Windows file-lock issue as the YouTube upload
+            if response.get("md5Checksum") != local_md5:
+                log(f"  !! checksum mismatch for {p.name} (local {local_md5}, Drive {response.get('md5Checksum')}). "
+                    "NOT marked as archived. The Drive copy was left in place; nothing was deleted.")
+                continue
+            drive_id = response["id"]
+        fresh = load_manifest()           # reload just before saving: other runs may have changed the file
+        upsert(fresh, r["key"], md5=local_md5, drive_id=drive_id,
+               archived_at=dt.datetime.now().isoformat(timespec="seconds"))
+        save_manifest(fresh)
+        log(f"  archived and checked: Drive id {drive_id}")
+
+
 # --------------------------------------------------------------------------- main
 
 
 def main():
-    ap = argparse.ArgumentParser(description="Contact Sheet - Meta Quest gallery pipeline")
-    ap.add_argument("command", nargs="?", default="run", choices=["run", "fetch", "upload", "publish"])
+    ap = argparse.ArgumentParser(description="Contact Sheet clip pipeline")
+    ap.add_argument("command", nargs="?", default="run", choices=["run", "fetch", "upload", "publish", "archive"])
     ap.add_argument("--dry-run", action="store_true")
+    ap.add_argument("--limit", type=int, help="archive: copy only this many clips (smallest first)")
     ap.add_argument("--since", help="YYYY-MM-DD")
+    ap.add_argument("--yes", action="store_true",
+                    help="non-interactive: ask nothing (never bypasses the PUBLISH safeguard)")
     args = ap.parse_args()
 
     cfg = load_config()
@@ -604,13 +791,17 @@ def main():
 
     try:
         if args.command in ("run", "fetch"):
-            do_fetch(cfg, since, args.dry_run)
+            do_fetch(cfg, since, args.dry_run, args.yes)
         if args.command in ("run", "upload"):
-            upload_phase(cfg, args.dry_run)
+            upload_phase(cfg, args.dry_run, args.yes)
         if args.command == "publish":
             publish_phase(cfg)
+        if args.command == "archive":
+            archive_phase(cfg, args.dry_run, args.limit, args.yes)
     except KeyboardInterrupt:
         print("\nStopped.")
+    except EOFError:
+        raise SystemExit("This step asks a question and there is no keyboard. Run it at the PC, or use --yes.")
     print("\nAll done.")
 
 
