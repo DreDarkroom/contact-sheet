@@ -16,10 +16,19 @@ clip after clip, got old fast.
    upload if your chosen notice text isn't present on the reference video's description.
 5. A separate, deliberate `publish` step (types `PUBLISH` to confirm) is the only way anything
    goes public.
+6. Optional: archives clips that are on YouTube to your Google Drive, copying only and checking each copy by MD5 (nothing is ever deleted).
 
 Still images aren't a YouTube fit, so this repo also documents the lighter-weight side pipeline:
 pulling gallery photos and handing them to whatever cloud storage syncs on your machine (Dropbox,
 OneDrive, etc.) instead.
+
+## Window and phone page
+
+- **Windows:** double-click `tool/Contact Sheet.bat` for a small dark window with thumbnails, status, and buttons to preview and start an upload or a Drive archive. It asks first.
+- **Phone (home Wi-Fi only):** `py -3 clip_web.py` prints a link with a random token. Preview, type a confirmation word, then confirm. It is not exposed to the internet; put it behind a tunnel with a real login before ever changing that.
+- **`--yes`:** non-interactive runs for the above. It never bypasses the safeguards: uploads stay unlisted and `publish` always needs a person typing `PUBLISH`.
+
+See [`tool/WHATS_NEW.md`](tool/WHATS_NEW.md).
 
 ## Why
 
